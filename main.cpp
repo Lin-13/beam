@@ -3,7 +3,7 @@
 #include"beam.hpp"
 using namespace std;
 int main(){
-    load l1(1,vector<double>{0,1},load::M);
+    load l1(1,vector<double>{1},load::M);
     restrain r1(0,restrain::M);
     beam b1;
     b1.addLoad(l1);

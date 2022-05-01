@@ -28,6 +28,7 @@ public:
         this->constant=data[0];
         if(rank==M||rank==F){
             this->section.push_back(data[1]);
+            this->section.push_back(data[1]);
             this->point=data[1];
             this->config = 1;
         }else if(rank==q){
@@ -50,6 +51,7 @@ public:
         this->rank = rank;
         this->constant=data[0];
         if(rank==M||rank==F){
+            this->section.push_back(data[1]);
             this->section.push_back(data[1]);
             this->point=data[0];
             this->config = 1;
@@ -86,7 +88,8 @@ public:
                 printf("wrong section size\n");
                 this->config=0;
             }
-            this->section=section;
+            this->section.push_back(section[0]);
+            this->section.push_back(section[0]);
             this->point=section[0];
         }
     }
@@ -108,7 +111,8 @@ public:
                 printf("wrong section size\n");
                 this->config=0;
             }
-            this->section=section;
+            this->section.push_back(section[0]);
+            this->section.push_back(section[0]);
             this->point=section[0];
         }
     }
@@ -127,7 +131,7 @@ public:
             this->point=(*section+*(section+1))/2;
         }
         if(rank==M||rank==F){
-           this->section=std::vector<double>(*section);
+           this->section=std::vector<double>(*section,*section);
            this->point=this->section[0];
         }
     }
