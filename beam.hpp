@@ -96,11 +96,11 @@ public:
             "M",
             "F"
         };
-        printf("ResNum\tF大小\tM大小\t位置\t类型\n");        
+        printf("ResNum\tF大小\tM大小\t位置\t类型\t是否已知\n");        
         for(auto i:this->restrains){
             
-            printf("%d\t%.2f\t%.2f\t%.2f\t%s\n",\
-            cnt,i.getFValue(),i.getMValue(),i.getPoint(),str[i.getRank()]);
+            printf("%d\t%.2f\t%.2f\t%.2f\t%s\t%s\n",\
+            cnt,i.getFValue(),i.getMValue(),i.getPoint(),str[i.getRank()],i.isknown==0?"No":"Yes");
             cnt++;
         }
     }
@@ -109,7 +109,7 @@ public:
 
 
 /*******计算约束*******/
-bool beam::calcRestrain(){
+bool beam::calcRestrain(void){
     //读取数据
     int freedom = 3;
     int resMomentNum = 0;
@@ -154,12 +154,12 @@ bool beam::calcRestrain(){
     double M = 0;
     for(auto i:loads){
         if(i.getRank()==load::F){
-            M += i.getConstantValue()*(i.getSectionValue()[0]-resMomentloc);
+            M += i.getConstantValue()*(i.getSectionValue()[0]-0);
         }
         if(i.getRank()==load::q){
             M += i.getConstantValue()\
                 *(i.getSectionValue()[1]-i.getSectionValue()[0])\
-                *((i.getSectionValue()[0]+i.getSectionValue()[1])/2-resMomentloc);
+                *((i.getSectionValue()[0]+i.getSectionValue()[1])/2-0);
             }
         if(i.getRank()==load::M){
             M += i.getConstantValue();
@@ -242,21 +242,17 @@ std::vector<funcInfo> beam::__calcTheta(void){
             Ftheta.push_back(edge_funcInfo);
         }
     }
-    
-    for(auto it=Ftheta.begin();it<Ftheta.end();it++){
-        printfunc(*it," ");
-    }
     return Ftheta;
 }
 //计算部分常数项
 std::vector<funcInfo> beam::__calcBend(void){
-    std::vector<funcInfo>bend;
-    std::vector<funcInfo>theta;
-    theta=__calcTheta();
-    for(auto i:theta){
+    std::vector<funcInfo>Fbend;
+    std::vector<funcInfo>Ftheta;
+    Ftheta=__calcTheta();
+    for(auto i:Ftheta){
         i.k=i.k/(i.n+1);
         i.n++;
-        bend.push_back(i);
+        Fbend.push_back(i);
     }
     if(type==M_1){
         funcInfo edge_bendFuncs[1];
@@ -270,13 +266,13 @@ std::vector<funcInfo> beam::__calcBend(void){
             }
         }
         edge_bendFuncs[0].k=0;
-        for(auto i:bend){
+        for(auto i:Fbend){
             double y;
             calcfuncValue(x,y,i.k,i.a,i.n);
             edge_bendFuncs[0].k-=y;
         }
         if(edge_bendFuncs[0].k>0.0001||edge_bendFuncs[0].k<-0.0001){
-            bend.push_back(edge_bendFuncs[0]);
+            Fbend.push_back(edge_bendFuncs[0]);
         }
     }
     if(type==F_2){
@@ -296,7 +292,7 @@ std::vector<funcInfo> beam::__calcBend(void){
             }
         }
         edge_bendFuncs[0].k=0;
-        for(auto i:bend){
+        for(auto i:Fbend){
             double y[2];
             calcfuncValue(x[0],y[0],i.k,i.a,i.n);
             calcfuncValue(x[1],y[1],i.k,i.a,i.n);
@@ -305,10 +301,34 @@ std::vector<funcInfo> beam::__calcBend(void){
         }
         for(int i=0;i<2;i++){
             if(edge_bendFuncs[i].k>0.0001||edge_bendFuncs[i].k<-0.0001){
-                bend.push_back(edge_bendFuncs[i]);
+                Fbend.push_back(edge_bendFuncs[i]);
             }
         }
     }
+    return Fbend;
+}
+//计算挠度
+std::vector<funcInfo> beam::calcBend(void){
+    std::vector<funcInfo>Fbend=__calcBend();
+    printf("(");
+    for(auto i:Fbend){
+        printfunc(i);
+    }
+    printf(")/EI");
+    return Fbend;
+}
+std::vector<funcInfo> beam::calcTheta(void){
+    std::vector<funcInfo>Fbend=calcBend();
+    std::vector<funcInfo>Ftheta;
+    for(auto i:Fbend){
+        i.k=i.k*i.n;
+        i.n--;
+        Ftheta.push_back(i);
+    }
+    for(auto i:Ftheta){
+        printfunc(i);
+    }
+    return Ftheta;
 }
 void beam::calcL(){
     double Lmax=0;

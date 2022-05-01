@@ -145,3 +145,9 @@ void printfunc(funcInfo fun,const char* s){
     }
     printf("%.5f*<x-%.2f>^%d%s",fun.k,fun.a,fun.n,s);
 }
+void printfunc(funcInfo fun){
+    if(fun.k>=0){
+        printf("+");
+    }
+    printf("%.5f*<x-%.2f>^%d",fun.k,fun.a,fun.n);
+}

@@ -5,9 +5,11 @@ private:
     double point;
     double Fvalue;
     double Mvalue;
-    int isknown;
     int rank;
 public:
+    double setMValue(double Mvalue);
+    double setFValue(double Fvalue);
+    int isknown;
     enum restrain_flags{
         M,
         F
@@ -15,7 +17,7 @@ public:
     restrain()=default;
     restrain(double point,int rank){
         this->point=point;
-        this->isknown=false;
+        this->isknown=0;
         this->Fvalue=0;
         this->Mvalue=0;
         if(rank==M||rank==F){
@@ -24,16 +26,6 @@ public:
         else{
             printf("rank error\n");
         }
-    }
-    double setFValue(double Fvalue){
-        this->Fvalue=Fvalue;
-        this->isknown=true;
-        return this->Fvalue;
-    }
-    double setMValue(double Mvalue){
-        this->Mvalue=Mvalue;
-        this->isknown=true;
-        return this->Mvalue;
     }
     double getPoint(){
         return this->point;
@@ -48,3 +40,13 @@ public:
         return this->rank;
     }
 };
+double restrain::setFValue(double Fvalue){
+    this->Fvalue=Fvalue;
+    this->isknown++;
+    return this->Fvalue;
+}
+double restrain::setMValue(double Mvalue){
+    this->Mvalue=Mvalue;
+    this->isknown++;
+    return this->Mvalue;
+}
