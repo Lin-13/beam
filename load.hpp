@@ -136,9 +136,6 @@ public:
         return this->constant;
     }
     std::vector<double> getSectionValue(){
-        if(this->rank!=q){
-            printf("并非均布负载，可能存在错误\n");
-        }
         return std::vector<double>(this->section);
    }
    std::vector<double> getData(){

@@ -72,7 +72,6 @@ public:
                 F += i.getConstantValue()*(i.getSectionValue()[1]-i.getSectionValue()[0]);
             }
         }
-        printf("F:%f\n",F);
 
         //计算负载力矩
         double M = 0;
