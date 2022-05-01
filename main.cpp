@@ -11,5 +11,7 @@ int main(){
     b1.calcRestrain();
     b1.listLoad();
     b1.listRestrain();
+    //cout<<eps;
+    cout<<u(1,0);
     return 0;
 }

@@ -3,7 +3,7 @@
 #include<stdio.h>
 #include"load.hpp"
 #include"restrain.hpp"
-//#include"Eigen/Core"
+#include"functions.hpp"
 #include"Eigen/Core"
 #include"Eigen/Dense"
 class beam{
