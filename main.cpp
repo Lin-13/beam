@@ -12,6 +12,8 @@ int main(){
     b1.listLoad();
     b1.listRestrain();
     //cout<<eps;
-    cout<<u(1,0);
+    double y;
+    calcfuc(2,y,1,0,-1);
+    cout<<y<<endl;
     return 0;
 }
