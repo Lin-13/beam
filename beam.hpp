@@ -15,8 +15,17 @@ private:
     double Lmax;
     double Lmin;
     double length;
+    int type;
+    std::vector<funcInfo> __calcTheta(void);
+    std::vector<funcInfo> __calcBend(void);
 public:
+    //约束类型
+    enum res_type{
+        M_1,
+        F_2
+    };
     beam()=default;
+    ~beam()=default;
     beam(std::vector<load>&& loads,std::vector<restrain>&& restrains){
         this->loads = loads;
         this->restrains = restrains;
@@ -31,7 +40,8 @@ public:
     }
     ////////////////////计算////////////////////
     bool calcRestrain();
-    std::vector<std::vector<double>> beam::calcBend(double accuracy);
+    std::vector<funcInfo> calcTheta(void);
+    std::vector<funcInfo> calcBend(void);
     void calcL();
     ////////////////////设置和修改参数////////////////////
     void setE(double E){
@@ -85,15 +95,19 @@ public:
         const char* str[]={
             "M",
             "F"
-        };        
+        };
+        printf("ResNum\tF大小\tM大小\t位置\t类型\n");        
         for(auto i:this->restrains){
-            printf("ResNum\tF大小\tM大小\t位置\t类型\n");
+            
             printf("%d\t%.2f\t%.2f\t%.2f\t%s\n",\
             cnt,i.getFValue(),i.getMValue(),i.getPoint(),str[i.getRank()]);
             cnt++;
         }
     }
 };
+
+
+
 /*******计算约束*******/
 bool beam::calcRestrain(){
     //读取数据
@@ -104,7 +118,7 @@ bool beam::calcRestrain(){
     double resForceloc[2]={0,0};
     //记录索引
     std::vector<restrain>::iterator resMomentIter=restrains.begin();
-    std::vector<restrain>::iterator resForceIter[2]={restrains.end(),restrains.end()};
+    std::vector<restrain>::iterator resForceIter[2]={restrains.begin(),restrains.begin()};
         
     for(auto i=this->restrains.begin();i!=this->restrains.end();i++){
         if(i->getRank()==restrain::F){
@@ -152,29 +166,149 @@ bool beam::calcRestrain(){
         }
     }
     if(resMomentNum==0){
+            this->type=F_2;
             Eigen::Matrix2f A(2,2);
             A(0,0) = 1;
             A(0,1) = 1;
             A(1,0) = resForceIter[0]->getPoint();
             A(1,1) = resForceIter[1]->getPoint();
-            Eigen::Matrix2f b(2,1);
+            Eigen::Matrix<float,2,1>  b;
             b(0,0)=-F;
             b(1,0)=-M;
-            Eigen::Matrix2f x = A.inverse()*b;
+            Eigen::Matrix<float,2,1> x = A.inverse()*b;
             resForceIter[0]->setFValue(x(0,0));
+            resForceIter[0]->setMValue(0);
             resForceIter[1]->setFValue(x(1,0));
+            resForceIter[0]->setMValue(0);
     }
     if(resMomentNum==1){
+            this->type=M_1;
             resMomentIter->setFValue(-F);
             resMomentIter->setMValue(F*resMomentIter->getPoint()-M);
     }
     return true;
 
 }
-std::vector<std::vector<double>> beam::calcBend(double accuracy){
-    std::vector<std::vector<double>>result;
+//为计算常数项或部分常数项
+std::vector<funcInfo> beam::__calcTheta(void){
+    //std::vector<funcInfo>bend;
+    std::vector<funcInfo>Ftheta;
     calcL();
+    //计算所有theta函数
+
+    for(auto l:this->loads){
+        std::vector<funcInfo>temp;
+        temp=calcThetaFuncInfo(l);
+        for(auto i:temp){
+            //printfunc(i);
+            if(i.k>=0.00001||i.k<=-0.00001){
+                Ftheta.push_back(i);
+            }
+        }
+    }
+    for(auto r:this->restrains){
+        std::vector<funcInfo>temp;
+        temp=calcThetaFuncInfo(r);
+        for(auto i:temp){
+            if(i.k>=0.00001||i.k<=-0.00001){
+                Ftheta.push_back(i);
+            }
+        }
+    }
+    if(type==M_1){
+        printf("\ntype:M_1\n");
+        //计算theta代表的函数在矩约束处的theta值
+        funcInfo edge_funcInfo;//边缘条件函数a=-inf,n=0,即退化为常数
+
+        edge_funcInfo.a=-inf;
+        edge_funcInfo.n=0;
+        edge_funcInfo.k=0;//初始化
+        double x=0;
+        for(auto r:restrains){
+            if(r.getRank()==restrain::M){
+                x=r.getPoint();
+            }
+        }
+        
+        for(auto i:Ftheta){
+            double temp;
+            bool ret=calcfuncValue(x,temp,i.k,i.a,i.n);
+            if(ret==true){
+                edge_funcInfo.k-=temp;
+            }
+        }
+        if(edge_funcInfo.k>=0.01&&edge_funcInfo.k<=-0.01){
+            printfunc(edge_funcInfo,"\n");
+            Ftheta.push_back(edge_funcInfo);
+        }
+    }
     
+    for(auto it=Ftheta.begin();it<Ftheta.end();it++){
+        printfunc(*it," ");
+    }
+    return Ftheta;
+}
+//计算部分常数项
+std::vector<funcInfo> beam::__calcBend(void){
+    std::vector<funcInfo>bend;
+    std::vector<funcInfo>theta;
+    theta=__calcTheta();
+    for(auto i:theta){
+        i.k=i.k/(i.n+1);
+        i.n++;
+        bend.push_back(i);
+    }
+    if(type==M_1){
+        funcInfo edge_bendFuncs[1];
+        double x;
+        for(auto r:restrains){
+            if(r.getRank()==restrain::M){
+                edge_bendFuncs[0].a=r.getPoint();
+                edge_bendFuncs[0].n=1;
+                x=r.getPoint();
+                break;
+            }
+        }
+        edge_bendFuncs[0].k=0;
+        for(auto i:bend){
+            double y;
+            calcfuncValue(x,y,i.k,i.a,i.n);
+            edge_bendFuncs[0].k-=y;
+        }
+        if(edge_bendFuncs[0].k>0.0001||edge_bendFuncs[0].k<-0.0001){
+            bend.push_back(edge_bendFuncs[0]);
+        }
+    }
+    if(type==F_2){
+        funcInfo edge_bendFuncs[2];
+        double x[2];
+        int cnt=0;
+        for(auto r:restrains){
+            if((r.getRank()==restrain::M)&&cnt==0){
+                edge_bendFuncs[0].a=r.getPoint();
+                edge_bendFuncs[0].n=0;
+                x[0]=r.getPoint();
+            }
+            if((r.getRank()==restrain::M)&&cnt==1){
+                edge_bendFuncs[1].a=r.getPoint();
+                edge_bendFuncs[1].n=0;
+                x[1]=r.getPoint();
+            }
+        }
+        edge_bendFuncs[0].k=0;
+        for(auto i:bend){
+            double y[2];
+            calcfuncValue(x[0],y[0],i.k,i.a,i.n);
+            calcfuncValue(x[1],y[1],i.k,i.a,i.n);
+            edge_bendFuncs[0].k-=y[0];
+            edge_bendFuncs[1].k-=y[1];
+        }
+        for(int i=0;i<2;i++){
+            if(edge_bendFuncs[i].k>0.0001||edge_bendFuncs[i].k<-0.0001){
+                bend.push_back(edge_bendFuncs[i]);
+            }
+        }
+    }
 }
 void beam::calcL(){
     double Lmax=0;
