@@ -1,3 +1,4 @@
+//main.cpp
 #include<iostream>
 #include<vector>
 #include"beam.hpp"
